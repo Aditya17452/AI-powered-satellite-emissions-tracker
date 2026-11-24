@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pollution Detection Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --secondary: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --light: #f8fafc;
+      --dark: #111827;
+      --gray: #6b7280;
+      --light-gray: #e5e7eb;
+    }
+    
+    * {
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+    
+    body { 
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; 
+      margin: 0; 
+      background: var(--light); 
+      color: var(--dark); 
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Login Screen */
+    #login-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    
+    .login-container {
+      background: white;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    
+    .login-logo {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: var(--primary);
+      font-size: 2.5rem;
+    }
+    
+    .login-title {
+      text-align: center;
+      margin: 0 0 1.5rem;
+      color: var(--dark);
+      font-weight: 600;
+    }
+    
+    .form-group {
+      margin-bottom: 1.2rem;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: var(--dark);
+    }
+    
+    .form-control {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--light-gray);
+      border-radius: 10px;
+      font-size: 1rem;
+    }
+    
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+    }
+    
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+    }
+    
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+    
+    .login-footer {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: var(--gray);
+      font-size: 0.9rem;
+    }
+    
+    /* Dashboard */
+    #dashboard {
+      display: none;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    
+    header { 
+      background: var(--primary); 
+      color: white; 
+      padding: 1rem 1.5rem; 
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+    
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    
+    .logout-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 8px;
+    }
+    
+    .logout-btn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+    
+    .container { 
+      padding: 1.5rem; 
+      max-width: 1200px; 
+      margin: auto; 
+      flex: 1;
+    }
+    
+    .grid { 
+      display: grid; 
+      gap: 1.2rem; 
+      grid-template-columns: 1fr; 
+    }
+    
+    @media (min-width: 900px) { 
+      .grid { 
+        grid-template-columns: 1.1fr 1fr; 
+      } 
+    }
+    
+    .card { 
+      background: #fff; 
+      border-radius: 12px; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.06); 
+      padding: 1.2rem; 
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+    }
+    
+    .title { 
+      margin: 0 0 0.75rem; 
+      font-size: 1.1rem; 
+      color: var(--dark); 
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .row { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr; 
+      gap: 0.75rem; 
+    }
+    
+    .row3 { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr; 
+      gap: 0.75rem; 
+    }
+    
+    label { 
+      font-size: 0.9rem; 
+      color: var(--gray); 
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    
+    input, button { 
+      padding: 0.75rem; 
+      border: 1px solid var(--light-gray); 
+      border-radius: 10px; 
+      font-family: inherit;
+    }
+    
+    input {
+      width: 100%;
+    }
+    
+    button { 
+      background: var(--primary); 
+      color: white; 
+      border: none; 
+      cursor: pointer; 
+      font-weight: 500;
+    }
+    
+    button:hover { 
+      background: var(--primary-dark); 
+    }
+    
+    #map { 
+      height: 360px; 
+      border-radius: 12px; 
+    }
+    
+    .status-badges { 
+      display: grid; 
+      grid-template-columns: 1fr 1fr 1fr; 
+      gap: 0.75rem; 
+      margin-bottom: 1rem;
+    }
+    
+    .badge { 
+      border-radius: 10px; 
+      padding: 0.75rem; 
+      text-align: center;
+      font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    
+    .badge-value {
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+    
+    .good { background: #dcfce7; color: #166534; }
+    .satisfactory { background: #e0f2fe; color: #1e40af; }
+    .moderate { background: #fef9c3; color: #854d0e; }
+    .poor { background: #fee2e2; color: #991b1b; }
+    .verypoor { background: #fecaca; color: #7f1d1d; }
+    .severe { background: #fca5a5; color: #7f1d1d; }
+    
+    pre { 
+      background: #f3f4f6; 
+      padding: 1rem; 
+      border-radius: 10px; 
+      overflow: auto; 
+      font-family: monospace;
+      font-size: 0.9rem;
+    }
+    
+    .legend { 
+      font-size: 0.85rem; 
+      color: var(--gray); 
+      margin-top: 0.5rem; 
+      line-height: 1.4;
+    }
+    
+    canvas { 
+      max-height: 300px; 
+    }
+    
+    .slider-container {
+      margin: 1rem 0;
+    }
+    
+    .slider-container label {
+      margin-bottom: 0.5rem;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      background: var(--light-gray);
+      border-radius: 5px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+    }
+    
+    .industry-box {
+      background: #f3f4f6;
+      padding: 1rem;
+      border-radius: 10px;
+      margin-top: 0.5rem;
+    }
+    
+    .industry-name {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .industry-details {
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+    
+    footer {
+      background: white;
+      padding: 1rem 1.5rem;
+      text-align: center;
+      color: var(--gray);
+      font-size: 0.9rem;
+      border-top: 1px solid var(--light-gray);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="login-screen">
+    <div class="login-container">
+      <div class="login-logo">
+        <i class="fas fa-earth-americas"></i>
+      </div>
+      <h2 class="login-title">Pollution Detection Dashboard</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" class="form-control" placeholder="Enter your username" required>
+        </div>
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Sign In</button>
+      </form>
+      <div class="login-footer">
+        Demo: Use any credentials to login
+      </div>
+    </div>
+  </div>
+
+  <!-- Dashboard (hidden initially) -->
+  <div id="dashboard">
+    <header>
+      <div class="header-title">
+        <i class="fas fa-earth-americas"></i>
+        <span>Pollution Detection Dashboard</span>
+      </div>
+      <div class="user-menu">
+        <div class="user-avatar" id="user-avatar">U</div>
+        <button class="logout-btn" onclick="logout()">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </header>
+
+    <div class="container">
+      <!-- Search Box -->
+      <div class="card">
+        <h3 class="title"><i class="fas fa-search"></i> Search</h3>
+        <div class="row3">
+          <div>
+            <label>City</label>
+            <input type="text" id="city" placeholder="e.g., Varanasi" />
+          </div>
+          <div>
+            <label>Latitude</label>
+            <input type="number" id="lat" step="0.0001" placeholder="25.3176" />
+          </div>
+          <div>
+            <label>Longitude</label>
+            <input type="number" id="lon" step="0.0001" placeholder="82.9739" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:0.75rem;">
+          <div>
+            <label>Date (prediction target)</label>
+            <input type="date" id="date" />
+          </div>
+          <div style="display:flex; align-items:flex-end;">
+            <button style="width:100%;" onclick="run()">
+              <i class="fas fa-chart-line"></i> Get Data
+            </button>
+          </div>
+        </div>
+        <div class="legend">Enter coordinates and a date. We'll show the past 72 hours, the next 72 hours, and the prediction on the chosen date.</div>
+      </div>
+
+      <!-- Map & Status -->
+      <div class="grid" style="margin-top:1rem;">
+        <div class="card">
+          <h3 class="title"><i class="fas fa-map-marked-alt"></i> Map</h3>
+          <div id="map"></div>
+          <div class="legend">City marker (blue). Responsible industry is marked with a popup.</div>
+        </div>
+
+        <div class="card">
+          <h3 class="title"><i class="fas fa-info-circle"></i> Current Status</h3>
+          <div class="status-badges">
+            <div id="pm25Badge" class="badge">
+              <span>PM2.5</span>
+              <span class="badge-value">—</span>
+            </div>
+            <div id="pm10Badge" class="badge">
+              <span>PM10</span>
+              <span class="badge-value">—</span>
+            </div>
+            <div id="co2Badge" class="badge">
+              <span>CO2</span>
+              <span class="badge-value">—</span>
+            </div>
+          </div>
+          <div class="legend" id="currentValues" style="margin-top:0.5rem;"></div>
+
+          <h3 class="title" style="margin-top:1rem;"><i class="fas fa-industry"></i> Responsible Industry</h3>
+          <div id="industryBox" class="industry-box">—</div>
+        </div>
+      </div>
+
+      <!-- Trend Chart with Slider -->
+      <div class="card" style="margin-top:1rem;">
+        <h3 class="title"><i class="fas fa-chart-line"></i> 72-Hour Trend (Past & Future)</h3>
+        <div class="slider-container">
+          <label>Show last <span id="hourLabel">12</span> hours:</label>
+          <input type="range" id="hourSlider" min="6" max="72" value="12" step="6" />
+        </div>
+        <canvas id="trendChart"></canvas>
+      </div>
+
+      <!-- Date Prediction -->
+      <div class="card" style="margin-top:1rem;">
+        <h3 class="title"><i class="fas fa-calendar-day"></i> Prediction for Selected Date</h3>
+        <pre id="datePredBox">—</pre>
+      </div>
+    </div>
+
+    <footer>
+      &copy; 2023 Pollution Detection Dashboard | Environmental Monitoring System
+    </footer>
+  </div>
+
+  <script>
+    // --- Authentication ---
+    function login(event) {
+      event.preventDefault();
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      
+      // Simple demo authentication - accept any non-empty credentials
+      if (username && password) {
+        // Store user info (in a real app, you'd use a more secure method)
+        localStorage.setItem('loggedIn', 'true');
+        localStorage.setItem('username', username);
+        
+        // Update UI
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'flex';
+        
+        // Set user avatar initial
+        document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
+        
+        // Initialize the dashboard
+        initDashboard();
+      } else {
+        alert('Please enter both username and password');
+      }
+    }
+    
+    function logout() {
+      localStorage.removeItem('loggedIn');
+      localStorage.removeItem('username');
+      document.getElementById('login-screen').style.display = 'flex';
+      document.getElementById('dashboard').style.display = 'none';
+      document.getElementById('login-form').reset();
+    }
+    
+    function checkAuth() {
+      if (localStorage.getItem('loggedIn') === 'true') {
+        const username = localStorage.getItem('username') || 'U';
+        document.getElementById('login-screen').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'flex';
+        document.getElementById('user-avatar').textContent = username.charAt(0).toUpperCase();
+        initDashboard();
+      }
+    }
+    
+    // --- Map ---
+    let map = L.map('map').setView([25.3176, 82.9739], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    let cityMarker = null;
+    let industryMarker = null;
+
+    // --- Chart ---
+    let trendChart = null;
+    let allLabels = [];
+    let allSeries = null;
+
+    function statusClass(s) {
+      const k = s.toLowerCase().replace(" ", "");
+      if (k.includes("verypoor")) return "verypoor";
+      return k;
+    }
+    
+    function setBadge(el, label, value, status) {
+      el.className = `badge ${statusClass(status)}`;
+      el.innerHTML = `<span>${label}</span><span class="badge-value">${value}</span>`;
+      el.title = `${status} level`;
+    }
+    
+    function lineColor(name) {
+      if (name === "PM2.5" || name === "PM2_5") return "rgba(220,38,38,1)";
+      if (name === "PM10") return "rgba(37,99,235,1)";
+      if (name === "CO2") return "rgba(16,185,129,1)";
+      return "rgba(107,114,128,1)";
+    }
+    
+    function dashedColor(name) {
+      return lineColor(name).replace(",1)", ",0.5)");
+    }
+
+    async function run() {
+      const city = document.getElementById("city").value || "Unknown";
+      const lat = parseFloat(document.getElementById("lat").value || "25.3176");
+      const lon = parseFloat(document.getElementById("lon").value || "82.9739");
+      const date = document.getElementById("date").value;
+
+      // Show loading state
+      document.getElementById("currentValues").innerText = "Loading data...";
+      
+      try {
+        const res = await fetch("/predict", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ city, lat, lon, date })
+        });
+        const data = await res.json();
+
+        // --- Map update ---
+        map.setView([lat, lon], 11);
+        if (cityMarker) map.removeLayer(cityMarker);
+        cityMarker = L.marker([lat, lon], { title: city }).addTo(map)
+          .bindPopup(`<b>${city}</b><br>(${lat.toFixed(4)}, ${lon.toFixed(4)})`).openPopup();
+
+        if (industryMarker) map.removeLayer(industryMarker);
+        if (data.industry) {
+          industryMarker = L.marker([data.industry.lat, data.industry.lon], { title: data.industry.name })
+            .addTo(map)
+            .bindPopup(`<b>${data.industry.name}</b><br>Emits: ${data.industry.pollutants.join(", ")}`);
+        }
+
+        // --- Current status ---
+        const cs = data.current_status;
+        setBadge(document.getElementById("pm25Badge"), "PM2.5", cs["PM2.5"].value, cs["PM2.5"].status);
+        setBadge(document.getElementById("pm10Badge"), "PM10", cs["PM10"].value, cs["PM10"].status);
+        setBadge(document.getElementById("co2Badge"), "CO2", cs["CO2"].value, cs["CO2"].status);
+        document.getElementById("currentValues").innerText =
+          `PM2.5=${cs["PM2.5"].value}, PM10=${cs["PM10"].value}, CO2=${cs["CO2"].value}`;
+
+        // --- Chart data ---
+        const hist = data.history_72h;
+        const fut = data.future_72h;
+        allLabels = hist.map(d => d.timestamp).concat(fut.map(d => d.timestamp));
+        allSeries = {
+          "PM2.5": { hist: hist.map(d => d.PM2_5), fut: fut.map(d => d.PM2_5) },
+          "PM10":  { hist: hist.map(d => d.PM10),  fut: fut.map(d => d.PM10)  },
+          "CO2":   { hist: hist.map(d => d.CO2),   fut: fut.map(d => d.CO2)   }
+        };
+
+        updateChart(parseInt(document.getElementById("hourSlider").value));
+
+        // --- Date prediction ---
+        const box = document.getElementById("datePredBox");
+        if (data.prediction_on_date) {
+          const p = data.prediction_on_date;
+          box.textContent = JSON.stringify(p, null, 2);
+        } else {
+          box.textContent = "—";
+        }
+
+        // --- Industry box ---
+        const ibox = document.getElementById("industryBox");
+        if (data.industry) {
+          ibox.innerHTML = `
+            <div class="industry-name">${data.industry.name}</div>
+            <div class="industry-details">
+              Emits: ${data.industry.pollutants.join(", ")}<br>
+              Location: (${data.industry.lat.toFixed(4)}, ${data.industry.lon.toFixed(4)})
+            </div>
+          `;
+        } else {
+          ibox.textContent = "—";
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        document.getElementById("currentValues").innerText = "Error loading data. Please try again.";
+      }
+    }
+
+    function updateChart(hours) {
+      document.getElementById("hourLabel").innerText = hours;
+
+      const end = allLabels.length;
+      const start = Math.max(0, end - hours);
+      const labels = allLabels.slice(start, end);
+
+      const datasets = [
+        {
+          label: "PM2.5",
+          data: allSeries["PM2.5"].hist.concat(allSeries["PM2.5"].fut).slice(start, end),
+          borderColor: lineColor("PM2.5"), 
+          backgroundColor: lineColor("PM2.5").replace("1)", "0.1)"),
+          tension: 0.2,
+          fill: true
+        },
+        {
+          label: "PM10",
+          data: allSeries["PM10"].hist.concat(allSeries["PM10"].fut).slice(start, end),
+          borderColor: lineColor("PM10"), 
+          backgroundColor: lineColor("PM10").replace("1)", "0.1)"),
+          tension: 0.2,
+          fill: true
+        },
+        {
+          label: "CO2",
+          data: allSeries["CO2"].hist.concat(allSeries["CO2"].fut).slice(start, end),
+          borderColor: lineColor("CO2"), 
+          backgroundColor: lineColor("CO2").replace("1)", "0.1)"),
+          tension: 0.2,
+          fill: true
+        }
+      ];
+
+      if (trendChart) trendChart.destroy();
+      trendChart = new Chart(document.getElementById("trendChart"), {
+        type: "line",
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { 
+            legend: { position: "top" },
+            tooltip: {
+              mode: 'index',
+              intersect: false
+            }
+          },
+          scales: {
+            x: { 
+              ticks: { maxTicksLimit: 12 },
+              grid: {
+                display: false
+              }
+            },
+            y: { 
+              beginAtZero: false,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function initDashboard() {
+      // Set default values
+      const today = new Date().toISOString().split("T")[0];
+      document.getElementById("city").value = "Varanasi";
+      document.getElementById("lat").value = "25.3176";
+      document.getElementById("lon").value = "82.9739";
+      document.getElementById("date").value = today;
+      
+      // Run the initial data load
+      run();
+    }
+
+    // Event listeners
+    document.getElementById("login-form").addEventListener("submit", login);
+    document.getElementById("hourSlider").addEventListener("input", e => {
+      updateChart(parseInt(e.target.value));
+    });
+
+    // Check authentication on page load
+    window.addEventListener("DOMContentLoaded", checkAuth);
+  </script>
+</body>
+</html>
